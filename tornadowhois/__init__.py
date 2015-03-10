@@ -13,7 +13,8 @@ loop = ioloop.IOLoop.instance()
 class AsyncWhoisClient(object):
 
     default_server = "whois.iana.org"
-    timeout = 5
+    timeout = 2
+    whois_port = 43
     resolver = None
 
     def __init__(self, resolver=None):
@@ -54,23 +55,27 @@ class AsyncWhoisClient(object):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
         stream = iostream.IOStream(sock)
 
-        if self.resolver and not netutil.is_valid_ip(server):
-            server = self._get_ip_by_name(name)
+        logging.debug("Requesting {} whois for {}".format(server, name))
 
-        yield stream.connect((server, 43))
+        if self.resolver and not netutil.is_valid_ip(server):
+            server = yield self._get_ip_by_name(server)
+            logging.debug("Solver ")
+
+        yield stream.connect((server, self.whois_port))
 
         yield stream.write("{}\r\n".format(name))
         data = yield stream.read_until_close()
 
         raise gen.Return(data)
 
+    @gen.coroutine
     def _get_ip_by_name(self, address):
-        data = self.resolver.resolve(address, None)
+        data = yield self.resolver.resolve(address, None, socket.AF_INET)
         # [(2, ('<ip_address>', None))]
         for v in data:
             num, adr = v
-            return adr[0]
-        return None
+            raise gen.Return(adr[0])
+        raise gen.Return(None)
 
     def _read_next_server_name(self, data):
         lines = data.split("\n")
@@ -83,4 +88,4 @@ class AsyncWhoisClient(object):
         return None
 
     def on_timeout(self):
-        raise Exception("Timeout Error")
+        raise Exception("AsyncWhoisClient timeout error")
