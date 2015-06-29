@@ -87,5 +87,5 @@ class AsyncWhoisClient(object):
 
         return None
 
-    def on_timeout(self):
-        raise Exception("AsyncWhoisClient timeout error")
+    def on_timeout(self, address):
+        raise Exception("AsyncWhoisClient timeout error while receiving {}".format(address))
