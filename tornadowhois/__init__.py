@@ -4,7 +4,7 @@ import logging
 import datetime
 from functools import partial
 
-from tornado import gen, iostream, ioloop, netutil
+from tornado import gen, iostream, ioloop, netutil, stack_context
 
 logger = logging.getLogger(__name__)
 loop = ioloop.IOLoop.instance()
@@ -13,7 +13,7 @@ loop = ioloop.IOLoop.instance()
 class AsyncWhoisClient(object):
 
     default_server = "whois.iana.org"
-    timeout = 2
+    timeout = 3
     whois_port = 43
     resolver = None
 
@@ -41,11 +41,13 @@ class AsyncWhoisClient(object):
         results.append((server, record,))
 
         next_server = self._read_next_server_name(record)
+        prev_server = None
 
-        while next_server:
+        while next_server and next_server != prev_server:
             record = yield self.whois_query(name, next_server)
             results.append((next_server, record,))
             #
+            prev_server = next_server
             next_server = self._read_next_server_name(record)
 
         raise gen.Return(record)
