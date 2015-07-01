@@ -1,10 +1,8 @@
 import socket
 import re
 import logging
-import datetime
-from functools import partial
 
-from tornado import gen, iostream, ioloop, netutil, stack_context
+from tornado import gen, iostream, ioloop, netutil
 
 logger = logging.getLogger(__name__)
 loop = ioloop.IOLoop.instance()
@@ -13,7 +11,7 @@ loop = ioloop.IOLoop.instance()
 class AsyncWhoisClient(object):
 
     default_server = "whois.iana.org"
-    timeout = 3
+    timeout_sec = 3
     whois_port = 43
     resolver = None
 
@@ -26,12 +24,7 @@ class AsyncWhoisClient(object):
     def lookup(self, address):
 
         results = []
-        timeout = loop.add_timeout(datetime.timedelta(seconds=self.timeout),
-                                   partial(self.on_timeout, address))
-        try:
-            yield self.find_records(address, self.default_server, results)
-        finally:
-            loop.remove_timeout(timeout)
+        yield self.find_records(address, self.default_server, results)
 
         raise gen.Return(results)
 
@@ -88,6 +81,3 @@ class AsyncWhoisClient(object):
                 return match.group(2)
 
         return None
-
-    def on_timeout(self, address):
-        raise Exception("AsyncWhoisClient timeout error while receiving {}".format(address))
