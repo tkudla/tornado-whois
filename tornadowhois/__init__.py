@@ -54,7 +54,6 @@ class AsyncWhoisClient(object):
 
         if self.resolver and not netutil.is_valid_ip(server):
             server = yield self._get_ip_by_name(server)
-            logging.debug("Solver ")
 
         yield stream.connect((server, self.whois_port))
 
